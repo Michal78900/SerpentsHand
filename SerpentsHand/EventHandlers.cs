@@ -4,66 +4,81 @@ using MEC;
 using UnityEngine;
 using Exiled.API.Features;
 using Exiled.Events.EventArgs;
+using System.Text;
 
 namespace SerpentsHand
 {
     public partial class EventHandlers
     {
-	public static bool isSpawnable;    
-	
         public static List<int> shPlayers = new List<int>();
         private List<int> shPocketPlayers = new List<int>();
 
-        private static int respawnCount = 0;
+        private int teamRespawnCount = 0;
+        private int serpentsRespawnCount = 0;
+
+        public static bool isSpawnable;
 
         bool test = false;
 
         private static System.Random rand = new System.Random();
 
-        private static Vector3 shSpawnPos = new Vector3(0, 1001, 8);
+        private static Vector3 shSpawnPos = new Vector3(0, 1002, 8);
 
         public void OnRoundStart()
         {
             test = false;
             shPlayers.Clear();
             shPocketPlayers.Clear();
-            respawnCount = 0;
+            teamRespawnCount = 0;
+            serpentsRespawnCount = 0;
         }
-	    
-	public static void IsSpawnable()
+
+        public void CalculateChance()
         {
-            if (rand.Next(1, 101) <= SerpentsHand.instance.Config.SpawnChance && respawnCount >= SerpentsHand.instance.Config.RespawnDelay) isSpawnable = true;
+            if (rand.Next(1, 101) <= SerpentsHand.instance.Config.SpawnChance && Player.List.Count() > 0 && teamRespawnCount >= SerpentsHand.instance.Config.RespawnDelay && serpentsRespawnCount < SerpentsHand.instance.Config.MaxSpawns)
+                isSpawnable = true;
+
             else isSpawnable = false;
         }
 
         public void OnTeamRespawn(RespawningTeamEventArgs ev)
         {
-            if (ev.NextKnownTeam == Respawning.SpawnableTeamType.ChaosInsurgency)
+            if (isSpawnable)
             {
-                if (isSpawnable && Player.List.Count() > 0 && respawnCount >= SerpentsHand.instance.Config.RespawnDelay)
+                if (ev.NextKnownTeam == Respawning.SpawnableTeamType.NineTailedFox)
                 {
-                    List<Player> SHPlayers = new List<Player>();
-                    List<Player> CIPlayers = new List<Player>(ev.Players);
-                    ev.Players.Clear();
-
-                    for (int i = 0; i < SerpentsHand.instance.Config.MaxSquad && CIPlayers.Count > 0; i++)
-                    {
-                        Player player = CIPlayers[rand.Next(CIPlayers.Count)];
-                        SHPlayers.Add(player);
-                        CIPlayers.Remove(player);
-                    }
-                    Timing.CallDelayed(0.1f, () => SpawnSquad(SHPlayers));
+                    // Prevent announcement
+                    ev.NextKnownTeam = Respawning.SpawnableTeamType.ChaosInsurgency;
                 }
-                else
+
+                List<Player> SHPlayers = new List<Player>();
+                List<Player> CIPlayers = new List<Player>(ev.Players);
+                ev.Players.Clear();
+
+                for (int i = 0; i < SerpentsHand.instance.Config.MaxSquad && CIPlayers.Count > 0; i++)
                 {
-                    string ann = SerpentsHand.instance.Config.CiEntryAnnouncement;
-                    if (ann != string.Empty)
+                    Player player = CIPlayers[rand.Next(CIPlayers.Count)];
+                    SHPlayers.Add(player);
+                    CIPlayers.Remove(player);
+                }
+                Timing.CallDelayed(0.1f, () =>
+                {
+                    if (isSpawnable)
                     {
-                        Cassie.Message(ann, true, true);
+                        SpawnSquad(SHPlayers);
+                        serpentsRespawnCount++;
                     }
+                });
+            }
+            else if (ev.NextKnownTeam == Respawning.SpawnableTeamType.ChaosInsurgency)
+            {
+                string ann = SerpentsHand.instance.Config.CiEntryAnnouncement;
+                if (ann != string.Empty)
+                {
+                    Cassie.GlitchyMessage(ann, 0.05f, 0.05f);
                 }
             }
-            respawnCount++;
+            teamRespawnCount++;
         }
 
         public void OnPocketDimensionEnter(EnteringPocketDimensionEventArgs ev)
@@ -71,15 +86,6 @@ namespace SerpentsHand
             if (shPlayers.Contains(ev.Player.Id))
             {
                 shPocketPlayers.Add(ev.Player.Id);
-            }
-        }
-
-        public void OnSpawn(SpawningEventArgs ev)
-        {
-            if (shPlayers.Contains(ev.Player.Id))
-            {
-                ev.Player.CustomPlayerInfo = "<color=#00FF58>Serpents Hand</color>";
-                ev.Player.PlayerInfoArea &= ~PlayerInfoArea.Role;
             }
         }
 
@@ -149,8 +155,8 @@ namespace SerpentsHand
         {
             if (shPlayers.Contains(ev.Target.Id))
             {
-                ev.Target.CustomPlayerInfo = string.Empty;
-                ev.Target.PlayerInfoArea |= PlayerInfoArea.Role;
+                ev.Target.CustomInfo = string.Empty;
+                ev.Target.ReferenceHub.nicknameSync.ShownPlayerInfo |= PlayerInfoArea.Role;
                 shPlayers.Remove(ev.Target.Id);
             }
 
@@ -202,7 +208,7 @@ namespace SerpentsHand
                         ev.IsAllowed = true;
                         ev.IsRoundEnded = true;
 
-                        GrantFF();
+                        if (SerpentsHand.instance.Config.EndRoundFriendlyFire) GrantFF();
                     }
                 }
                 else
@@ -211,12 +217,12 @@ namespace SerpentsHand
                     ev.IsAllowed = true;
                     ev.IsRoundEnded = true;
 
-                    GrantFF();
+                    if (SerpentsHand.instance.Config.EndRoundFriendlyFire) GrantFF();
                 }
             }
-            else if(SHAlive && !ScpAlive && !MTFAlive && !DClassAlive && !ScientistsAlive)
-			{
-                GrantFF();
+            else if (SHAlive && !ScpAlive && !MTFAlive && !DClassAlive && !ScientistsAlive)
+            {
+                if (SerpentsHand.instance.Config.EndRoundFriendlyFire) GrantFF();
             }
             else
             {
@@ -231,6 +237,15 @@ namespace SerpentsHand
                 if (GetTeam(ev.NewRole) != Team.TUT)
                 {
                     shPlayers.Remove(ev.Player.Id);
+                    ev.Player.CustomInfo = string.Empty;
+                    ev.Player.ReferenceHub.nicknameSync.ShownPlayerInfo |= PlayerInfoArea.Nickname;
+                    ev.Player.ReferenceHub.nicknameSync.ShownPlayerInfo |= PlayerInfoArea.Role;
+                }
+                else
+                {
+                    ev.Player.CustomInfo = $"<color=#00FF58>{ev.Player.Nickname}\n{SerpentsHand.instance.Config.RoleName}</color>";
+                    ev.Player.ReferenceHub.nicknameSync.ShownPlayerInfo &= ~PlayerInfoArea.Nickname;
+                    ev.Player.ReferenceHub.nicknameSync.ShownPlayerInfo &= ~PlayerInfoArea.Role;
                 }
             }
         }
@@ -249,6 +264,9 @@ namespace SerpentsHand
             if (shPlayers.Contains(ev.Player.Id))
             {
                 shPlayers.Remove(ev.Player.Id);
+                ev.Player.CustomInfo = string.Empty;
+                ev.Player.ReferenceHub.nicknameSync.ShownPlayerInfo |= PlayerInfoArea.Nickname;
+                ev.Player.ReferenceHub.nicknameSync.ShownPlayerInfo |= PlayerInfoArea.Role;
             }
         }
 

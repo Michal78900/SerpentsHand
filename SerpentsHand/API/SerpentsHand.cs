@@ -1,4 +1,4 @@
-using Exiled.API.Features;
+﻿using Exiled.API.Features;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -6,11 +6,6 @@ namespace SerpentsHand.API
 {
 	public static class SerpentsHand
 	{
-		public static void Spawnable()
-		{
-			EventHandlers.IsSpawnable();
-		}
-
 		public static void SpawnPlayer(Player player, bool full = true)
 		{
 			EventHandlers.SpawnPlayer(player, full);

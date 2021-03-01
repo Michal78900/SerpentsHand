@@ -3,7 +3,7 @@ using System.Linq;
 using Exiled.API.Enums;
 using Exiled.API.Features;
 using MEC;
-using scp035.API;
+using Scp035.API;
 
 namespace SerpentsHand
 {
@@ -12,8 +12,7 @@ namespace SerpentsHand
         internal static void SpawnPlayer(Player player, bool full = true)
         {
             shPlayers.Add(player.Id);
-            player.SetRole(RoleType.Tutorial, true);
-            player.Position = shSpawnPos;
+            player.SetRole(RoleType.Tutorial);
             player.Broadcast(10, SerpentsHand.instance.Config.SpawnBroadcast);
             if (full)
             {
@@ -21,7 +20,6 @@ namespace SerpentsHand
                 player.Ammo[(int)AmmoType.Nato762] = 250;
                 player.Ammo[(int)AmmoType.Nato9] = 250;
 
-                player.Inventory.items.ToList().Clear();
                 for (int i = 0; i < SerpentsHand.instance.Config.SpawnItems.Count; i++)
                 {
                     player.Inventory.AddNewItem((ItemType)SerpentsHand.instance.Config.SpawnItems[i]);
@@ -31,7 +29,7 @@ namespace SerpentsHand
                 //Respawning.RespawnTickets.Singleton.GrantTickets(Respawning.SpawnableTeamType.ChaosInsurgency, 1);
             }
 
-            //Timing.CallDelayed(0.3f, () => player.Position = shSpawnPos);
+            Timing.CallDelayed(0.5f, () => player.Position = shSpawnPos);
         }
 
         internal static void CreateSquad(int size)
@@ -67,11 +65,12 @@ namespace SerpentsHand
                 SpawnPlayer(player);
             }
 
-            Cassie.Message(SerpentsHand.instance.Config.EntryAnnouncement, true, true);
+            if (players.Count > 0) 
+                Cassie.Message(SerpentsHand.instance.Config.EntryAnnouncement, true, true);
         }
 
         internal static void GrantFF()
-		{
+        {
             foreach (int id in shPlayers)
             {
                 Player p = Player.Get(id);
@@ -90,7 +89,7 @@ namespace SerpentsHand
 
         private Player TryGet035()
         {
-            return Scp035Data.GetScp035();
+            return Scp035Data.AllScp035.FirstOrDefault();
         }
 
         private int CountRoles(Team team)
