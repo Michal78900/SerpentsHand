@@ -13,8 +13,8 @@ namespace SerpentsHand
         public static List<int> shPlayers = new List<int>();
         private List<int> shPocketPlayers = new List<int>();
 
-        private int teamRespawnCount = 0;
-        private int serpentsRespawnCount = 0;
+        public static int teamRespawnCount = 0;
+        public static int serpentsRespawnCount = 0;
 
         public static bool isSpawnable;
 
@@ -355,5 +355,7 @@ namespace SerpentsHand
                 ev.ReturnMessage = msg;
             }
         }
+
+        public static int MaxSpawns = SerpentsHand.instance.Config.MaxSpawns;
     }
 }
