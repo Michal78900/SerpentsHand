@@ -80,7 +80,7 @@ namespace SerpentsHand
         {
             foreach (var plugin in Loader.Plugins)
             {
-                if (plugin.Name.ToLower() == "scp035")
+                if (plugin.Name.ToLower() == "scp035" && plugin.Config.IsEnabled)
                 {
                     isScp035 = true;
                     Log.Debug("SCP-035 plugin detected!");
