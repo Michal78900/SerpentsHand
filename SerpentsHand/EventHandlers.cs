@@ -63,6 +63,9 @@ namespace SerpentsHand
                 }
                 Timing.CallDelayed(0.1f, () =>
                 {
+                    if (!isSpawnable)
+                        SHPlayers.Clear();
+
                     if (isSpawnable)
                     {
                         SpawnSquad(SHPlayers);
